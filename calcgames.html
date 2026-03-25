@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CalcGames — Games For Your Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Press+Start+2P&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c10;
+    --bg2: #0d1520;
+    --bg3: #111d2e;
+    --green: #00ff88;
+    --cyan: #00e5ff;
+    --yellow: #ffe600;
+    --red: #ff3d5a;
+    --purple: #b347ff;
+    --text: #d4e8f0;
+    --dim: #6a8fa8;
+    --border: rgba(0,229,255,0.18);
+    --glow: 0 0 18px rgba(0,255,136,0.35), 0 0 40px rgba(0,229,255,0.15);
+    --glow-y: 0 0 18px rgba(255,230,0,0.35), 0 0 40px rgba(255,230,0,0.1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 17px;
+    overflow-x: hidden;
+  }
+
+  /* ─── NOISE OVERLAY ─── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 9999; opacity: 0.4;
+  }
+
+  /* ─── SCANLINES ─── */
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(to bottom, transparent 0px, transparent 3px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 4px);
+    pointer-events: none; z-index: 9998;
+  }
+
+  /* ─── NAV ─── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 1000;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 40px;
+    height: 62px;
+    background: rgba(8,12,16,0.88);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-logo {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 14px;
+    color: var(--green);
+    text-shadow: var(--glow);
+    text-decoration: none;
+    letter-spacing: 1px;
+  }
+  .nav-logo span { color: var(--cyan); }
+  .nav-links { display: flex; gap: 32px; }
+  .nav-links a {
+    color: var(--dim);
+    text-decoration: none;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--cyan); }
+  .nav-cta {
+    background: var(--green);
+    color: #000 !important;
+    padding: 8px 20px;
+    font-weight: 700 !important;
+    border-radius: 3px;
+    transition: box-shadow 0.2s, background 0.2s !important;
+  }
+  .nav-cta:hover { background: var(--cyan) !important; box-shadow: var(--glow); }
+
+  /* ─── HERO ─── */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 80px 40px 60px;
+    position: relative;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  /* animated grid bg */
+  .hero-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.05) 1px, transparent 1px);
+    background-size: 50px 50px;
+    animation: gridPulse 6s ease-in-out infinite;
+  }
+  @keyframes gridPulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+
+  .hero-glow {
+    position: absolute;
+    width: 700px; height: 700px;
+    background: radial-gradient(circle, rgba(0,229,255,0.08) 0%, transparent 70%);
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .hero-badge {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--green);
+    border: 1px solid rgba(0,255,136,0.3);
+    padding: 6px 16px;
+    border-radius: 2px;
+    margin-bottom: 24px;
+    animation: fadeSlideUp 0.8s ease both;
+    position: relative; z-index: 2;
+  }
+  .hero-badge::before {
+    content: '▶ ';
+    animation: blink 1.2s step-end infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  .hero h1 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(22px, 4vw, 46px);
+    line-height: 1.5;
+    color: #fff;
+    text-shadow: 0 0 30px rgba(0,229,255,0.4);
+    margin-bottom: 8px;
+    position: relative; z-index: 2;
+    animation: fadeSlideUp 0.8s 0.15s ease both;
+  }
+  .hero h1 .accent { color: var(--green); }
+  .hero h1 .accent2 { color: var(--cyan); }
+
+  .hero-sub {
+    font-size: 20px;
+    color: var(--dim);
+    max-width: 600px;
+    line-height: 1.6;
+    margin: 20px auto 40px;
+    position: relative; z-index: 2;
+    animation: fadeSlideUp 0.8s 0.3s ease both;
+  }
+
+  .hero-btns {
+    display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+    position: relative; z-index: 2;
+    animation: fadeSlideUp 0.8s 0.45s ease both;
+  }
+
+  .btn-primary {
+    display: inline-block;
+    background: var(--green);
+    color: #000;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 14px 32px;
+    text-decoration: none;
+    border-radius: 3px;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    box-shadow: 0 0 0 rgba(0,255,136,0);
+  }
+  .btn-primary:hover { box-shadow: var(--glow); transform: translateY(-2px); }
+
+  .btn-outline {
+    display: inline-block;
+    border: 1.5px solid var(--cyan);
+    color: var(--cyan);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 1px;
+    padding: 14px 32px;
+    text-decoration: none;
+    border-radius: 3px;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .btn-outline:hover { background: rgba(0,229,255,0.08); transform: translateY(-2px); }
+
+  .hero-stats {
+    display: flex; gap: 48px; margin-top: 64px;
+    position: relative; z-index: 2;
+    animation: fadeSlideUp 0.8s 0.6s ease both;
+  }
+  .stat { text-align: center; }
+  .stat-num {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 22px;
+    color: var(--green);
+    text-shadow: var(--glow);
+    display: block;
+  }
+  .stat-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-top: 6px;
+    display: block;
+  }
+
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ─── SCROLL ARROW ─── */
+  .scroll-hint {
+    position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+    z-index: 2;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+  .scroll-hint span {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; letter-spacing: 2px; color: var(--dim); text-transform: uppercase;
+  }
+  .scroll-arrow { width: 20px; height: 20px; border-right: 2px solid var(--dim); border-bottom: 2px solid var(--dim); transform: rotate(45deg); animation: bounce 1.5s infinite; }
+  @keyframes bounce { 0%,100%{transform:rotate(45deg) translateY(0)} 50%{transform:rotate(45deg) translateY(5px)} }
+
+  /* ─── SECTION LAYOUT ─── */
+  section { padding: 90px 40px; max-width: 1200px; margin: 0 auto; }
+
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; letter-spacing: 4px; text-transform: uppercase;
+    color: var(--cyan); margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-label::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  .section-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(14px, 2.5vw, 22px);
+    line-height: 1.6;
+    color: #fff; margin-bottom: 14px;
+  }
+
+  .section-desc { color: var(--dim); max-width: 560px; line-height: 1.7; font-size: 17px; }
+
+  /* ─── CALCULATORS SECTION ─── */
+  #calculators { border-top: 1px solid var(--border); }
+
+  .calc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-top: 50px;
+  }
+
+  .calc-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 28px;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .calc-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--green);
+  }
+  .calc-card:nth-child(2)::before { background: var(--cyan); }
+  .calc-card:nth-child(3)::before { background: var(--yellow); }
+  .calc-card:hover { transform: translateY(-4px); border-color: rgba(0,229,255,0.35); box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+
+  .calc-icon {
+    font-size: 36px; margin-bottom: 16px; display: block;
+    filter: drop-shadow(0 0 8px rgba(0,255,136,0.4));
+  }
+  .calc-name {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px; color: #fff; margin-bottom: 8px; line-height: 1.6;
+  }
+  .calc-badge {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; letter-spacing: 1px;
+    padding: 3px 10px;
+    border-radius: 2px;
+    margin-bottom: 14px;
+    background: rgba(0,255,136,0.12); color: var(--green); border: 1px solid rgba(0,255,136,0.25);
+  }
+  .calc-card:nth-child(2) .calc-badge { background: rgba(0,229,255,0.12); color: var(--cyan); border-color: rgba(0,229,255,0.25); }
+  .calc-card:nth-child(3) .calc-badge { background: rgba(255,230,0,0.12); color: var(--yellow); border-color: rgba(255,230,0,0.25); }
+
+  .calc-desc { color: var(--dim); font-size: 15px; line-height: 1.6; margin-bottom: 18px; }
+  .calc-features { list-style: none; }
+  .calc-features li {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px; color: var(--text); padding: 5px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .calc-features li::before { content: '›'; color: var(--green); font-size: 14px; }
+  .calc-card:nth-child(2) .calc-features li::before { color: var(--cyan); }
+  .calc-card:nth-child(3) .calc-features li::before { color: var(--yellow); }
+
+  /* ─── GAMES SECTION ─── */
+  #games { border-top: 1px solid var(--border); }
+
+  .games-tabs {
+    display: flex; gap: 4px; margin: 40px 0 28px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 4px;
+    width: fit-content;
+  }
+  .tab-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+    padding: 10px 22px; background: none; border: none;
+    color: var(--dim); cursor: pointer; border-radius: 3px;
+    transition: all 0.2s;
+  }
+  .tab-btn.active { background: var(--green); color: #000; font-weight: 700; }
+
+  .games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px;
+  }
+
+  .game-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 18px;
+    cursor: pointer;
+    transition: all 0.25s;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .game-card:hover {
+    border-color: var(--green);
+    background: var(--bg3);
+    box-shadow: 0 0 20px rgba(0,255,136,0.08);
+    transform: translateY(-2px);
+  }
+  .game-emoji { font-size: 28px; line-height: 1; }
+  .game-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px; color: #fff; line-height: 1.6;
+  }
+  .game-desc { font-size: 13px; color: var(--dim); line-height: 1.5; }
+  .game-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+  .tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; letter-spacing: 1px;
+    padding: 2px 8px;
+    border-radius: 2px;
+    background: rgba(0,229,255,0.08);
+    color: var(--cyan);
+    border: 1px solid rgba(0,229,255,0.15);
+  }
+  .tag.hot { background: rgba(255,61,90,0.08); color: var(--red); border-color: rgba(255,61,90,0.2); }
+  .tag.new { background: rgba(0,255,136,0.08); color: var(--green); border-color: rgba(0,255,136,0.2); }
+
+  /* ─── PRICING / HOW IT WORKS ─── */
+  #how { border-top: 1px solid var(--border); }
+
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    margin-top: 50px;
+  }
+  .step {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 28px;
+    position: relative;
+  }
+  .step-num {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 36px;
+    color: rgba(0,229,255,0.1);
+    position: absolute;
+    top: 16px; right: 20px;
+  }
+  .step-icon { font-size: 28px; margin-bottom: 14px; display: block; }
+  .step-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px; font-weight: 700; color: #fff;
+    text-transform: uppercase; letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  .step-desc { color: var(--dim); font-size: 15px; line-height: 1.6; }
+
+  /* ─── PRICING ─── */
+  #pricing { border-top: 1px solid var(--border); }
+
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-top: 50px;
+  }
+  .price-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 32px;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .price-card.featured {
+    border-color: var(--green);
+    background: linear-gradient(160deg, var(--bg3) 0%, var(--bg2) 100%);
+    box-shadow: 0 0 40px rgba(0,255,136,0.12);
+  }
+  .price-card.featured::after {
+    content: '★ BEST VALUE';
+    position: absolute; top: 14px; right: -28px;
+    background: var(--green); color: #000;
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; font-weight: 700; letter-spacing: 1px;
+    padding: 5px 40px;
+    transform: rotate(45deg);
+    transform-origin: center;
+  }
+  .price-card:hover { transform: translateY(-4px); }
+
+  .price-name {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--dim); margin-bottom: 16px;
+  }
+  .price-amount {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(22px, 3vw, 30px);
+    color: #fff; margin-bottom: 4px;
+  }
+  .price-amount .currency { font-size: 16px; color: var(--green); }
+  .price-sub { color: var(--dim); font-size: 13px; margin-bottom: 24px; }
+  .price-features { list-style: none; }
+  .price-features li {
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    color: var(--text);
+    font-size: 15px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .price-features li .check { color: var(--green); font-size: 14px; }
+  .price-features li .cross { color: var(--dim); font-size: 14px; }
+  .price-btn {
+    display: block; text-align: center; margin-top: 28px;
+    padding: 13px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px; letter-spacing: 1px; text-transform: uppercase;
+    text-decoration: none;
+    border-radius: 3px;
+    border: 1.5px solid var(--border);
+    color: var(--text);
+    transition: all 0.2s;
+  }
+  .price-card.featured .price-btn {
+    background: var(--green); color: #000; border-color: var(--green); font-weight: 700;
+  }
+  .price-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+  .price-card.featured .price-btn:hover { background: var(--cyan); border-color: var(--cyan); box-shadow: var(--glow); }
+
+  /* ─── FAQ ─── */
+  #faq { border-top: 1px solid var(--border); }
+
+  .faq-list { margin-top: 50px; display: flex; flex-direction: column; gap: 12px; }
+  .faq-item {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    overflow: hidden;
+  }
+  .faq-q {
+    padding: 20px 24px;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px; color: #fff; cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center;
+    transition: background 0.2s;
+  }
+  .faq-q:hover { background: var(--bg3); }
+  .faq-q .arrow { color: var(--cyan); font-size: 16px; transition: transform 0.3s; }
+  .faq-item.open .faq-q .arrow { transform: rotate(180deg); }
+  .faq-a {
+    max-height: 0; overflow: hidden; transition: max-height 0.35s ease, padding 0.35s;
+    padding: 0 24px;
+    color: var(--dim); font-size: 15px; line-height: 1.7;
+  }
+  .faq-item.open .faq-a { max-height: 200px; padding: 0 24px 20px; }
+
+  /* ─── CONTACT ─── */
+  #contact { border-top: 1px solid var(--border); }
+
+  .contact-wrap {
+    margin-top: 50px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 48px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    align-items: center;
+  }
+
+  .contact-info h3 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 14px; color: #fff; line-height: 1.7; margin-bottom: 16px;
+  }
+  .contact-info p { color: var(--dim); font-size: 16px; line-height: 1.7; margin-bottom: 24px; }
+  .contact-channels { display: flex; flex-direction: column; gap: 12px; }
+  .channel {
+    display: flex; align-items: center; gap: 12px;
+    font-family: 'Space Mono', monospace; font-size: 12px;
+    color: var(--text); padding: 12px 16px;
+    background: var(--bg3); border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+  .channel-icon { font-size: 18px; }
+  .channel-label { color: var(--dim); font-size: 10px; letter-spacing: 1px; display: block; }
+  .channel-val { color: var(--cyan); }
+
+  .contact-form { display: flex; flex-direction: column; gap: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--dim);
+  }
+  .form-input, .form-select, .form-textarea {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--cyan); }
+  .form-select option { background: var(--bg2); }
+  .form-textarea { resize: vertical; min-height: 100px; }
+  .form-submit {
+    background: var(--green); color: #000;
+    border: none; padding: 14px;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; cursor: pointer; border-radius: 3px;
+    transition: all 0.2s;
+  }
+  .form-submit:hover { background: var(--cyan); box-shadow: var(--glow); }
+
+  /* ─── FOOTER ─── */
+  footer {
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    padding: 40px;
+    text-align: center;
+  }
+  .footer-logo {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 16px; color: var(--green);
+    text-shadow: var(--glow);
+    margin-bottom: 12px;
+    display: block;
+  }
+  .footer-logo span { color: var(--cyan); }
+  .footer-tagline {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px; color: var(--dim); letter-spacing: 2px;
+    text-transform: uppercase; margin-bottom: 28px;
+  }
+  .footer-links { display: flex; justify-content: center; gap: 32px; flex-wrap: wrap; margin-bottom: 28px; }
+  .footer-links a {
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    letter-spacing: 1px; text-transform: uppercase; color: var(--dim);
+    text-decoration: none; transition: color 0.2s;
+  }
+  .footer-links a:hover { color: var(--cyan); }
+  .footer-copy {
+    font-size: 13px; color: rgba(106,143,168,0.5);
+    font-family: 'Space Mono', monospace; font-size: 10px;
+  }
+  .footer-disclaimer {
+    font-size: 12px; color: rgba(106,143,168,0.4);
+    max-width: 600px; margin: 12px auto 0; line-height: 1.6;
+  }
+
+  /* ─── TICKER ─── */
+  .ticker-wrap {
+    background: var(--green); overflow: hidden; padding: 10px 0; white-space: nowrap;
+  }
+  .ticker-inner {
+    display: inline-block;
+    animation: ticker 22s linear infinite;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px; color: #000;
+  }
+  @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+  .ticker-sep { margin: 0 28px; color: rgba(0,0,0,0.35); }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 768px) {
+    nav { padding: 0 20px; }
+    .nav-links { display: none; }
+    section { padding: 60px 20px; }
+    .hero { padding: 80px 20px 60px; }
+    .hero-stats { gap: 24px; }
+    .contact-wrap { grid-template-columns: 1fr; gap: 32px; padding: 28px; }
+    .footer-links { gap: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-logo" href="#">CALC<span>GAMES</span></a>
+  <div class="nav-links">
+    <a href="#calculators">Calculators</a>
+    <a href="#games">Games</a>
+    <a href="#how">How It Works</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#faq">FAQ</a>
+    <a href="#contact" class="nav-cta">Order Now</a>
+  </div>
+</nav>
+
+<!-- TICKER -->
+<div class="ticker-wrap" style="margin-top:62px;">
+  <div class="ticker-inner">
+    🎮 PACMAN &nbsp;<span class="ticker-sep">|</span>&nbsp; 🍄 MARIO &nbsp;<span class="ticker-sep">|</span>&nbsp; 🐦 FLAPPY BIRD &nbsp;<span class="ticker-sep">|</span>&nbsp; 💎 GEOMETRY DASH &nbsp;<span class="ticker-sep">|</span>&nbsp; 🧱 TETRIS &nbsp;<span class="ticker-sep">|</span>&nbsp; ♟️ CHESS &nbsp;<span class="ticker-sep">|</span>&nbsp; 🔢 2048 &nbsp;<span class="ticker-sep">|</span>&nbsp; ♠️ MINESWEEPER &nbsp;<span class="ticker-sep">|</span>&nbsp; 🦅 DONKEY KONG &nbsp;<span class="ticker-sep">|</span>&nbsp; 🚀 SPACE INVADERS &nbsp;<span class="ticker-sep">|</span>&nbsp; 👾 GALAXIAN &nbsp;<span class="ticker-sep">|</span>&nbsp;
+    🎮 PACMAN &nbsp;<span class="ticker-sep">|</span>&nbsp; 🍄 MARIO &nbsp;<span class="ticker-sep">|</span>&nbsp; 🐦 FLAPPY BIRD &nbsp;<span class="ticker-sep">|</span>&nbsp; 💎 GEOMETRY DASH &nbsp;<span class="ticker-sep">|</span>&nbsp; 🧱 TETRIS &nbsp;<span class="ticker-sep">|</span>&nbsp; ♟️ CHESS &nbsp;<span class="ticker-sep">|</span>&nbsp; 🔢 2048 &nbsp;<span class="ticker-sep">|</span>&nbsp; ♠️ MINESWEEPER &nbsp;<span class="ticker-sep">|</span>&nbsp; 🦅 DONKEY KONG &nbsp;<span class="ticker-sep">|</span>&nbsp; 🚀 SPACE INVADERS &nbsp;<span class="ticker-sep">|</span>&nbsp; 👾 GALAXIAN &nbsp;<span class="ticker-sep">|</span>&nbsp;
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+  <span class="hero-badge">Calculator Game Installation Service</span>
+  <h1>
+    Turn Your <span class="accent">Boring</span><br>
+    Calculator Into A<br>
+    <span class="accent2">Gaming Machine</span>
+  </h1>
+  <p class="hero-sub">
+    I install the best free games on your TI-84 Plus, TI-84 Plus CE, and more — 
+    fast, easy, right at school. Pac-Man, Mario, Tetris & 20+ more games waiting on your calc.
+  </p>
+  <div class="hero-btns">
+    <a href="#games" class="btn-primary">🎮 See All Games</a>
+    <a href="#pricing" class="btn-outline">💰 View Prices</a>
+  </div>
+  <div class="hero-stats">
+    <div class="stat">
+      <span class="stat-num">20+</span>
+      <span class="stat-label">Games Available</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num">~10</span>
+      <span class="stat-label">Min Install Time</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num">3</span>
+      <span class="stat-label">Calc Models</span>
+    </div>
+  </div>
+  <div class="scroll-hint">
+    <span>Scroll</span>
+    <div class="scroll-arrow"></div>
+  </div>
+</div>
+
+<!-- CALCULATORS -->
+<section id="calculators">
+  <div class="section-label">Supported Hardware</div>
+  <h2 class="section-title">Which Calculator<br>Do You Have?</h2>
+  <p class="section-desc">We support the most popular graphing calculators used at school. Pick yours below to see what's possible.</p>
+
+  <div class="calc-grid">
+    <!-- TI-84 Plus CE -->
+    <div class="calc-card">
+      <span class="calc-icon">🟢</span>
+      <div class="calc-name">TI-84 Plus CE</div>
+      <span class="calc-badge">BEST SUPPORTED</span>
+      <p class="calc-desc">The color screen CE model — supports the most games with the best graphics. Most popular at school right now.</p>
+      <ul class="calc-features">
+        <li>Full color screen — games look amazing</li>
+        <li>20+ games available to install</li>
+        <li>Easy install via TI Connect CE</li>
+        <li>Pac-Man, Mario, Geometry Dash & more</li>
+        <li>Newer OS may need a quick jailbreak</li>
+      </ul>
+    </div>
+    <!-- TI-84 Plus -->
+    <div class="calc-card">
+      <span class="calc-icon">🔵</span>
+      <div class="calc-name">TI-84 Plus (Original)</div>
+      <span class="calc-badge">FULLY SUPPORTED</span>
+      <p class="calc-desc">The classic black & white model. Requires MirageOS shell — tons of legendary games available.</p>
+      <ul class="calc-features">
+        <li>Uses MirageOS shell to run games</li>
+        <li>15+ games available</li>
+        <li>Mario, Tetris, Snake, Phoenix & more</li>
+        <li>Super Smash Bros. (yes, really!)</li>
+        <li>Bowling, RPGs, puzzle games</li>
+      </ul>
+    </div>
+    <!-- TI-84 Plus Silver -->
+    <div class="calc-card">
+      <span class="calc-icon">🟡</span>
+      <div class="calc-name">TI-84 Plus Silver Edition</div>
+      <span class="calc-badge">SUPPORTED</span>
+      <p class="calc-desc">The Silver Edition works exactly like the standard TI-84 Plus — same game library, same install process.</p>
+      <ul class="calc-features">
+        <li>Identical to TI-84 Plus install process</li>
+        <li>Same 15+ games available</li>
+        <li>MirageOS or Doors CS compatible</li>
+        <li>More RAM = more games installed at once</li>
+        <li>Ask me about other TI models too!</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- GAMES -->
+<section id="games">
+  <div class="section-label">Game Library</div>
+  <h2 class="section-title">Available Games</h2>
+  <p class="section-desc">All games below are free — you only pay for my installation service. Prices for games sourced from the open-source TI community.</p>
+
+  <div class="games-tabs">
+    <button class="tab-btn active" onclick="filterGames('all', this)">All</button>
+    <button class="tab-btn" onclick="filterGames('ce', this)">TI-84 CE Only</button>
+    <button class="tab-btn" onclick="filterGames('both', this)">Both Models</button>
+  </div>
+
+  <div class="games-grid" id="gamesGrid">
+
+    <div class="game-card" data-model="ce">
+      <span class="game-emoji">👻</span>
+      <div class="game-title">PAC-MAN CE</div>
+      <p class="game-desc">Classic arcade Pac-Man with smooth color graphics. Ghosts, pellets, the works.</p>
+      <div class="game-tags"><span class="tag hot">🔥 Fan Fave</span><span class="tag">Arcade</span></div>
+    </div>
+
+    <div class="game-card" data-model="ce">
+      <span class="game-emoji">🍄</span>
+      <div class="game-title">OIRAM (MARIO)</div>
+      <p class="game-desc">Full Mario-style platformer with enemies, power-ups, and multiple levels.</p>
+      <div class="game-tags"><span class="tag hot">🔥 #1 Popular</span><span class="tag">Platformer</span></div>
+    </div>
+
+    <div class="game-card" data-model="ce">
+      <span class="game-emoji">🐦</span>
+      <div class="game-title">FLAPPY BIRD CE</div>
+      <p class="game-desc">You know the drill. Avoid the pipes. Extremely addictive.</p>
+      <div class="game-tags"><span class="tag hot">🔥 Hot</span><span class="tag">Arcade</span></div>
+    </div>
+
+    <div class="game-card" data-model="ce">
+      <span class="game-emoji">💎</span>
+      <div class="game-title">GEOMETRY DASH CE</div>
+      <p class="game-desc">Jump and fly through obstacles. Comes with levels from the original game.</p>
+      <div class="game-tags"><span class="tag hot">🔥 Hot</span><span class="tag">Rhythm</span></div>
+    </div>
+
+    <div class="game-card" data-model="ce">
+      <span class="game-emoji">🧱</span>
+      <div class="game-title">TETRIS CE</div>
+      <p class="game-desc">The legendary block stacker in color. Multiple modes, high score table.</p>
+      <div class="game-tags"><span class="tag">Puzzle</span><span class="tag">Classic</span></div>
+    </div>
+
+    <div class="game-card" data-model="ce">
+      <span class="game-emoji">♟️</span>
+      <div class="game-title">CHESS CE</div>
+      <p class="game-desc">Full chess game with AI opponent and different difficulty modes.</p>
+      <div class="game-tags"><span class="tag">Strategy</span><span class="tag">AI</span></div>
+    </div>
+
+    <div class="game-card" data-model="ce">
+      <span class="game-emoji">🔢</span>
+      <div class="game-title">2048 CE</div>
+      <p class="game-desc">Combine tiles, reach 2048. Color graphics make it look clean.</p>
+      <div class="game-tags"><span class="tag">Puzzle</span><span class="tag new">Color</span></div>
+    </div>
+
+    <div class="game-card" data-model="ce">
+      <span class="game-emoji">💣</span>
+      <div class="game-title">MINESWEEPER CE</div>
+      <p class="game-desc">Classic minesweeper with a save feature. Surprisingly great on calc.</p>
+      <div class="game-tags"><span class="tag">Strategy</span><span class="tag new">Updated 2024</span></div>
+    </div>
+
+    <div class="game-card" data-model="ce">
+      <span class="game-emoji">🦍</span>
+      <div class="game-title">DONKEY KONG CE</div>
+      <p class="game-desc">Full recreation of the classic DK arcade game. Climb the ladders!</p>
+      <div class="game-tags"><span class="tag">Arcade</span><span class="tag">Classic</span></div>
+    </div>
+
+    <div class="game-card" data-model="ce">
+      <span class="game-emoji">🚀</span>
+      <div class="game-title">SPACE INVADERS CE</div>
+      <p class="game-desc">Shoot the aliens before they reach you. Classic arcade action.</p>
+      <div class="game-tags"><span class="tag">Arcade</span><span class="tag">Shooter</span></div>
+    </div>
+
+    <div class="game-card" data-model="ce">
+      <span class="game-emoji">🎯</span>
+      <div class="game-title">BREAKOUT CE</div>
+      <p class="game-desc">Breakout clone with 44 levels, power-ups, multi-ball, and a level editor.</p>
+      <div class="game-tags"><span class="tag">Arcade</span><span class="tag new">44 Levels!</span></div>
+    </div>
+
+    <div class="game-card" data-model="ce">
+      <span class="game-emoji">🧟</span>
+      <div class="game-title">ZOMBIE CHASE CE</div>
+      <p class="game-desc">Flee zombies and survive as long as you can. Tense and fun.</p>
+      <div class="game-tags"><span class="tag">Action</span><span class="tag">Survival</span></div>
+    </div>
+
+    <div class="game-card" data-model="both">
+      <span class="game-emoji">🍄</span>
+      <div class="game-title">SUPER MARIO (B&W)</div>
+      <p class="game-desc">Side-scrolling Mario for the original TI-84 Plus. A legendary port.</p>
+      <div class="game-tags"><span class="tag hot">🔥 Classic</span><span class="tag">Platformer</span></div>
+    </div>
+
+    <div class="game-card" data-model="both">
+      <span class="game-emoji">🥊</span>
+      <div class="game-title">SUPER SMASH BROS</div>
+      <p class="game-desc">Yes, really. SSB on your calculator. Linkable multiplayer with TI cable!</p>
+      <div class="game-tags"><span class="tag hot">🔥 Wild</span><span class="tag">Fighting</span></div>
+    </div>
+
+    <div class="game-card" data-model="both">
+      <span class="game-emoji">🌀</span>
+      <div class="game-title">SNAKE (UNCLE WORM)</div>
+      <p class="game-desc">Better version of Snake — your worm can turn in any direction.</p>
+      <div class="game-tags"><span class="tag">Arcade</span><span class="tag">Classic</span></div>
+    </div>
+
+    <div class="game-card" data-model="both">
+      <span class="game-emoji">🎳</span>
+      <div class="game-title">BOWLING</div>
+      <p class="game-desc">Physics-based bowling with AI tournaments and equipment upgrades.</p>
+      <div class="game-tags"><span class="tag">Sports</span><span class="tag">AI</span></div>
+    </div>
+
+    <div class="game-card" data-model="both">
+      <span class="game-emoji">🌌</span>
+      <div class="game-title">PHOENIX (SHOOTER)</div>
+      <p class="game-desc">Top-down space shooter with power-ups and loads of enemies. Fan favorite.</p>
+      <div class="game-tags"><span class="tag hot">🔥 Fan Fave</span><span class="tag">Shooter</span></div>
+    </div>
+
+    <div class="game-card" data-model="both">
+      <span class="game-emoji">🍉</span>
+      <div class="game-title">FRUIT NINJA</div>
+      <p class="game-desc">Slice fruit on your calculator using an innovative control scheme.</p>
+      <div class="game-tags"><span class="tag">Arcade</span><span class="tag">Fun</span></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="section-label">The Process</div>
+  <h2 class="section-title">How It Works</h2>
+  <p class="section-desc">Getting games on your calculator is easier than you think. Here's the whole process:</p>
+
+  <div class="steps-grid">
+    <div class="step">
+      <span class="step-num">01</span>
+      <span class="step-icon">💬</span>
+      <div class="step-title">Order & Pick Games</div>
+      <p class="step-desc">Tell me which calculator you have and pick your games from the list above. DM me or fill out the order form.</p>
+    </div>
+    <div class="step">
+      <span class="step-num">02</span>
+      <span class="step-icon">📲</span>
+      <div class="step-title">Hand Over Your Calc</div>
+      <p class="step-desc">Give me your calculator at school. I'll connect it to my laptop with your USB cable and transfer all the games.</p>
+    </div>
+    <div class="step">
+      <span class="step-num">03</span>
+      <span class="step-icon">⚡</span>
+      <div class="step-title">Install in ~10 Minutes</div>
+      <p class="step-desc">Using TI Connect CE, I transfer all game files to your calculator. Done in one class period or less.</p>
+    </div>
+    <div class="step">
+      <span class="step-num">04</span>
+      <span class="step-icon">🎮</span>
+      <div class="step-title">Play!</div>
+      <p class="step-desc">Get your calc back fully loaded with games. Press PRGM, select your game, and enjoy. Don't get caught by the teacher!</p>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="section-label">Packages</div>
+  <h2 class="section-title">Simple Pricing</h2>
+  <p class="section-desc">All prices are for the installation service. The games themselves are completely free.</p>
+
+  <div class="pricing-grid">
+    <div class="price-card">
+      <div class="price-name">Starter Pack</div>
+      <div class="price-amount"><span class="currency">€</span>2</div>
+      <div class="price-sub">per install session</div>
+      <ul class="price-features">
+        <li><span class="check">✓</span> Up to 3 games installed</li>
+        <li><span class="check">✓</span> TI-84 Plus or Plus CE</li>
+        <li><span class="check">✓</span> ~10 minute install</li>
+        <li><span class="cross">—</span> Game recommendations</li>
+        <li><span class="cross">—</span> Jailbreak included</li>
+      </ul>
+      <a href="#contact" class="price-btn">Order Starter</a>
+    </div>
+
+    <div class="price-card featured">
+      <div class="price-name">Full Load</div>
+      <div class="price-amount"><span class="currency">€</span>5</div>
+      <div class="price-sub">per install session</div>
+      <ul class="price-features">
+        <li><span class="check">✓</span> All 10+ games installed</li>
+        <li><span class="check">✓</span> Any supported calculator</li>
+        <li><span class="check">✓</span> Game recommendations</li>
+        <li><span class="check">✓</span> Jailbreak if needed</li>
+        <li><span class="check">✓</span> Free re-install if calc resets</li>
+      </ul>
+      <a href="#contact" class="price-btn">Order Full Load</a>
+    </div>
+
+    <div class="price-card">
+      <div class="price-name">Update Pass</div>
+      <div class="price-amount"><span class="currency">€</span>2</div>
+      <div class="price-sub">after initial install</div>
+      <ul class="price-features">
+        <li><span class="check">✓</span> Add new games later</li>
+        <li><span class="check">✓</span> Reinstall after factory reset</li>
+        <li><span class="check">✓</span> Switch out old games</li>
+        <li><span class="cross">—</span> Jailbreak not included</li>
+        <li><span class="cross">—</span> New calc, new order</li>
+      </ul>
+      <a href="#contact" class="price-btn">Order Update</a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="section-label">Questions</div>
+  <h2 class="section-title">FAQ</h2>
+  <p class="section-desc">Common questions about calculator game installation.</p>
+
+  <div class="faq-list">
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        Will this break my calculator?
+        <span class="arrow">▼</span>
+      </div>
+      <div class="faq-a">No! Games are just programs stored in your calculator's memory. You can delete them any time by pressing MEM → Manage Memory. Your calculator stays exactly the same — just with games on it.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        What if I get an "Error: Invalid" message?
+        <span class="arrow">▼</span>
+      </div>
+      <div class="faq-a">This happens if you have a newer OS on your CE calculator. The OS update disabled running assembly games. The fix is a quick jailbreak — included free in the Full Load package. It's totally reversible.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        Will the games disappear after a battery change?
+        <span class="arrow">▼</span>
+      </div>
+      <div class="faq-a">RAM memory can clear if the battery dies completely. However, I archive the games to Flash memory, which survives battery changes. If they do get wiped, use your Update Pass for a cheap reinstall!</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        Do I need to bring anything besides my calculator?
+        <span class="arrow">▼</span>
+      </div>
+      <div class="faq-a">Just bring your TI-84 and its USB charging cable (the one that comes in the box). That's it — I have everything else needed for the installation.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        Will this mess up my school work / apps on the calculator?
+        <span class="arrow">▼</span>
+      </div>
+      <div class="faq-a">Not at all. Games are stored as programs and don't touch your saved calculations, notes, or Texas Instruments apps. Everything stays separate and clean.</div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="section-label">Get In Touch</div>
+  <h2 class="section-title">Ready To Order?</h2>
+  <p class="section-desc">Fill out the form below or contact me directly. Find me at school or DM me!</p>
+
+  <div class="contact-wrap">
+    <div class="contact-info">
+      <h3>Let's Get Your Calc Loaded Up! 🎮</h3>
+      <p>Find me at school, DM me, or fill out the order form. I'll confirm your order, tell you when to bring your calc, and get you gaming in no time.</p>
+      <div class="contact-channels">
+        <div class="channel">
+          <span class="channel-icon">💬</span>
+          <div>
+            <span class="channel-label">Find me at school</span>
+            <span class="channel-val">Just come talk to me!</span>
+          </div>
+        </div>
+        <div class="channel">
+          <span class="channel-icon">⏱️</span>
+          <div>
+            <span class="channel-label">Install time</span>
+            <span class="channel-val">~10 minutes, done same day</span>
+          </div>
+        </div>
+        <div class="channel">
+          <span class="channel-icon">📦</span>
+          <div>
+            <span class="channel-label">Bring with you</span>
+            <span class="channel-val">Your calc + USB cable</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="contact-form">
+      <div class="form-group">
+        <label class="form-label">Your Name</label>
+        <input type="text" class="form-input" placeholder="First name is fine">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Calculator Model</label>
+        <select class="form-select">
+          <option>TI-84 Plus CE</option>
+          <option>TI-84 Plus (Original)</option>
+          <option>TI-84 Plus Silver Edition</option>
+          <option>Not sure / Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Package</label>
+        <select class="form-select">
+          <option>Full Load — €5 (Recommended)</option>
+          <option>Starter Pack — €2</option>
+          <option>Update Pass — €2</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Game Requests / Notes</label>
+        <textarea class="form-textarea" placeholder="Any specific games you want? Or anything else I should know..."></textarea>
+      </div>
+      <button class="form-submit" onclick="handleSubmit(this)">🎮 Submit Order</button>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <span class="footer-logo">CALC<span>GAMES</span></span>
+  <div class="footer-tagline">Calculator Gaming — Since 8th Grade</div>
+  <div class="footer-links">
+    <a href="#calculators">Calculators</a>
+    <a href="#games">Games</a>
+    <a href="#how">How It Works</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#faq">FAQ</a>
+    <a href="#contact">Order</a>
+  </div>
+  <div class="footer-copy">© 2026 CalcGames · Made with 🎮 at school</div>
+  <p class="footer-disclaimer">All games are free open-source software from the TI calculator community (Cemetech, ticalc.org, CalcPlex). You pay only for the installation service. Texas Instruments and TI-84 are trademarks of Texas Instruments Inc.</p>
+</footer>
+
+<script>
+  // ── FAQ toggle ──
+  function toggleFaq(el) {
+    const item = el.parentElement;
+    item.classList.toggle('open');
+  }
+
+  // ── Game filter tabs ──
+  function filterGames(filter, btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.game-card').forEach(card => {
+      if (filter === 'all') {
+        card.style.display = '';
+      } else {
+        const model = card.dataset.model;
+        card.style.display = (model === filter || model === 'both') ? '' : 'none';
+      }
+    });
+  }
+
+  // ── Form submit ──
+  function handleSubmit(btn) {
+    btn.textContent = '✅ Order Received! I\'ll find you at school!';
+    btn.style.background = 'var(--cyan)';
+    btn.disabled = true;
+  }
+
+  // ── Fade-in on scroll ──
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.style.opacity = '1';
+        e.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.calc-card, .game-card, .step, .price-card, .faq-item').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(20px)';
+    el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+    observer.observe(el);
+  });
+</script>
+</body>
+</html>
